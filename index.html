@@ -1,0 +1,2187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Media Package Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<style>
+/* ============================================================
+   CSS CUSTOM PROPERTIES — DESIGN TOKENS
+   ============================================================ */
+:root {
+  --bg:          #F5F3EF;
+  --bg-panel:    #FAFAF8;
+  --bg-card:     #FFFFFF;
+  --bg-code:     #1A1A2E;
+  --accent:      #FF4D1C;
+  --accent-2:    #FFB800;
+  --accent-3:    #00C896;
+  --ink:         #0F0F0F;
+  --ink-2:       #3A3A3A;
+  --ink-3:       #7A7A7A;
+  --ink-4:       #B0B0B0;
+  --border:      #E4E1D9;
+  --border-2:    #D0CCC3;
+  --radius:      12px;
+  --radius-lg:   18px;
+  --radius-xl:   24px;
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow:      0 4px 16px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
+  --shadow-lg:   0 12px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06);
+  --font-display: 'Syne', sans-serif;
+  --font-body:    'DM Sans', sans-serif;
+  --font-mono:    'DM Mono', monospace;
+  --transition:   0.18s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
+
+/* ============================================================
+   APP SHELL
+   ============================================================ */
+#app {
+  display: grid;
+  grid-template-rows: 56px 1fr;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ============================================================
+   TOPBAR
+   ============================================================ */
+#topbar {
+  background: var(--bg-card);
+  border-bottom: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  z-index: 100;
+  box-shadow: var(--shadow-sm);
+}
+
+.topbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.logo-badge {
+  width: 32px;
+  height: 32px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+}
+.logo-text {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+.logo-text span { color: var(--accent); }
+
+.topbar-divider {
+  width: 1.5px;
+  height: 24px;
+  background: var(--border);
+}
+
+.topbar-title {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--ink-3);
+  font-weight: 400;
+}
+
+.topbar-spacer { flex: 1; }
+
+.topbar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Export Dropdown */
+.export-btn-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all var(--transition);
+  white-space: nowrap;
+  user-select: none;
+}
+.btn svg { flex-shrink: 0; }
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-2);
+  border-color: var(--border);
+}
+.btn-ghost:hover { background: var(--bg); border-color: var(--border-2); color: var(--ink); }
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.btn-primary:hover { background: #E03D0E; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,77,28,0.3); }
+
+.btn-secondary {
+  background: var(--ink);
+  color: white;
+  border-color: var(--ink);
+}
+.btn-secondary:hover { background: #222; transform: translateY(-1px); }
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 0.76rem;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+  min-width: 200px;
+  box-shadow: var(--shadow-lg);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: all var(--transition);
+}
+.dropdown-menu.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.dropdown-item:hover { background: var(--bg); color: var(--ink); }
+.dropdown-item svg { color: var(--ink-3); }
+.dropdown-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* ============================================================
+   MAIN SPLIT LAYOUT
+   ============================================================ */
+#main {
+  display: grid;
+  grid-template-columns: 40% 60%;
+  overflow: hidden;
+}
+
+/* ============================================================
+   LEFT PANEL
+   ============================================================ */
+#left-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border-right: 1.5px solid var(--border);
+  overflow: hidden;
+}
+
+/* Left Header */
+.panel-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1.5px solid var(--border);
+  background: var(--bg-card);
+}
+.panel-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.panel-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.item-counter {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-4);
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+/* Add Media Buttons */
+.add-media-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.add-type-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  border-radius: 10px;
+  border: 1.5px dashed var(--border-2);
+  background: var(--bg);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.add-type-btn svg { transition: all var(--transition); }
+.add-type-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(255,77,28,0.04); }
+.add-type-btn:hover svg { color: var(--accent); transform: scale(1.1); }
+.add-type-btn.type-image:hover  { border-color: #6366F1; color: #6366F1; background: rgba(99,102,241,0.04); }
+.add-type-btn.type-image:hover svg { color: #6366F1; }
+.add-type-btn.type-video:hover  { border-color: var(--accent); color: var(--accent); background: rgba(255,77,28,0.04); }
+.add-type-btn.type-video:hover svg { color: var(--accent); }
+.add-type-btn.type-audio:hover  { border-color: var(--accent-3); color: var(--accent-3); background: rgba(0,200,150,0.04); }
+.add-type-btn.type-audio:hover svg { color: var(--accent-3); }
+.add-type-btn.type-mcq:hover    { border-color: var(--accent-2); color: var(--accent-2); background: rgba(255,184,0,0.04); }
+.add-type-btn.type-mcq:hover svg { color: var(--accent-2); }
+
+/* Media List */
+.media-list-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px 80px;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  gap: 12px;
+}
+.empty-illustration {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, var(--border) 0%, var(--bg) 100%);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-4);
+  margin-bottom: 4px;
+}
+.empty-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--ink-2);
+}
+.empty-sub {
+  font-size: 0.8rem;
+  color: var(--ink-4);
+  max-width: 220px;
+  line-height: 1.5;
+}
+
+/* Media Item Card */
+.media-item {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 10px;
+  overflow: hidden;
+  transition: all var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+.media-item:hover { border-color: var(--border-2); box-shadow: var(--shadow); }
+.media-item.drag-over { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,77,28,0.12); }
+.media-item.sortable-ghost { opacity: 0.4; }
+.media-item.sortable-drag { box-shadow: var(--shadow-lg); }
+
+.item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.drag-handle {
+  cursor: grab;
+  color: var(--ink-4);
+  padding: 2px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+.drag-handle:active { cursor: grabbing; }
+
+.type-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.type-chip.image  { background: rgba(99,102,241,0.1); color: #6366F1; }
+.type-chip.video  { background: rgba(255,77,28,0.1);  color: var(--accent); }
+.type-chip.audio  { background: rgba(0,200,150,0.1);  color: var(--accent-3); }
+.type-chip.mcq    { background: rgba(255,184,0,0.1);  color: #D4960F; }
+
+.item-label {
+  flex: 1;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.item-id-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--ink-4);
+  font-family: var(--font-mono);
+}
+
+.item-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--ink-4);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.icon-btn:hover { background: var(--bg); color: var(--ink-2); }
+.icon-btn.delete:hover { background: rgba(255,77,28,0.08); color: var(--accent); }
+
+.item-chevron {
+  transition: transform var(--transition);
+  flex-shrink: 0;
+}
+.media-item.expanded .item-chevron {
+  transform: rotate(180deg);
+}
+
+/* Item Form Body */
+.item-form {
+  display: none;
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--border);
+}
+.media-item.expanded .item-form { display: block; }
+
+.form-row { margin-top: 10px; }
+.form-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 5px;
+}
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--ink);
+  background: var(--bg);
+  transition: all var(--transition);
+  outline: none;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--accent);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(255,77,28,0.1);
+}
+.form-textarea { min-height: 60px; resize: vertical; }
+
+/* File upload */
+.file-upload-area {
+  border: 1.5px dashed var(--border-2);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition);
+  background: var(--bg);
+  position: relative;
+}
+.file-upload-area:hover { border-color: var(--accent); background: rgba(255,77,28,0.02); }
+.file-upload-area input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+.upload-hint { font-size: 0.72rem; color: var(--ink-4); margin-top: 3px; }
+
+.url-or { 
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  font-size: 0.68rem;
+  color: var(--ink-4);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.url-or::before, .url-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Toggle Switch */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+.toggle-label-text {
+  font-size: 0.8rem;
+  color: var(--ink-2);
+  font-weight: 500;
+}
+.toggle-switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--border-2);
+  border-radius: 99px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  top: 3px;
+  left: 3px;
+  transition: all var(--transition);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+/* MCQ Options */
+.mcq-options { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.mcq-option-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.mcq-option-radio { cursor: pointer; accent-color: var(--accent); width: 14px; height: 14px; flex-shrink: 0; }
+.mcq-option-input {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  background: var(--bg);
+  outline: none;
+  transition: all var(--transition);
+}
+.mcq-option-input:focus { border-color: var(--accent-2); background: white; }
+.mcq-add-option-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--ink-4);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: all var(--transition);
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+}
+.mcq-add-option-btn:hover { color: var(--accent-2); background: rgba(255,184,0,0.06); }
+
+/* Preview thumb */
+.media-thumb {
+  width: 100%;
+  height: 80px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  margin-top: 8px;
+  display: none;
+}
+.media-thumb.visible { display: block; }
+
+/* Validation warning */
+.validation-warning {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  background: rgba(255,184,0,0.1);
+  border: 1px solid rgba(255,184,0,0.3);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  color: #B8830A;
+  margin-top: 6px;
+  display: none;
+}
+.validation-warning.show { display: flex; }
+
+/* ── Order Strip ─────────────────────────────────── */
+.order-strip {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 8px 16px 6px;
+  overflow-x: auto;
+  min-height: 36px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.order-strip::-webkit-scrollbar { height: 3px; }
+.order-strip-empty {
+  font-size: 0.7rem;
+  color: var(--ink-4);
+  font-style: italic;
+}
+.order-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: 1.5px solid transparent;
+  cursor: default;
+  transition: transform 0.15s;
+}
+.order-pill:hover { transform: translateY(-1px); }
+.order-pill.image { background: rgba(99,102,241,0.1);  color: #6366F1; border-color: rgba(99,102,241,0.25); }
+.order-pill.video { background: rgba(255,77,28,0.1);   color: #FF4D1C; border-color: rgba(255,77,28,0.25); }
+.order-pill.audio { background: rgba(0,200,150,0.1);   color: #00C896; border-color: rgba(0,200,150,0.25); }
+.order-pill.mcq   { background: rgba(255,184,0,0.1);   color: #D4960F; border-color: rgba(255,184,0,0.3); }
+.order-arrow {
+  color: var(--ink-4);
+  font-size: 0.6rem;
+  padding: 0 2px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* ============================================================
+   RIGHT PANEL
+   ============================================================ */
+#right-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-code);
+  overflow: hidden;
+}
+
+/* Tab Bar */
+.code-tabs {
+  display: flex;
+  align-items: center;
+  background: #12121F;
+  border-bottom: 1.5px solid rgba(255,255,255,0.06);
+  padding: 0 16px;
+  gap: 4px;
+  flex-shrink: 0;
+  height: 48px;
+}
+
+.code-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 8px 8px 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.45);
+  cursor: pointer;
+  transition: all var(--transition);
+  border: 1.5px solid transparent;
+  border-bottom: none;
+  position: relative;
+  bottom: -1.5px;
+  user-select: none;
+}
+.code-tab:hover { color: rgba(255,255,255,0.7); }
+.code-tab.active {
+  background: var(--bg-code);
+  color: white;
+  border-color: rgba(255,255,255,0.08);
+  border-bottom-color: var(--bg-code);
+}
+.code-tab .tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-4);
+}
+.code-tab.active .tab-dot.html { background: #F06529; }
+.code-tab.active .tab-dot.css  { background: #2965F1; }
+.code-tab.active .tab-dot.js   { background: #F7DF1E; }
+
+.tabs-spacer { flex: 1; }
+
+.tab-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.5);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all var(--transition);
+  margin-left: 4px;
+}
+.tab-action-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.9);
+  border-color: rgba(255,255,255,0.2);
+}
+
+/* Code Area */
+.code-panel {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  display: none;
+}
+.code-panel.active { display: flex; }
+
+.line-numbers {
+  flex-shrink: 0;
+  padding: 20px 0;
+  width: 44px;
+  background: rgba(0,0,0,0.2);
+  border-right: 1px solid rgba(255,255,255,0.04);
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.15);
+  user-select: none;
+}
+.line-number { padding: 0 10px 0 4px; }
+
+.code-content {
+  flex: 1;
+  padding: 20px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.85);
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* Syntax Highlighting */
+.sh-keyword    { color: #FF79C6; }
+.sh-string     { color: #F1FA8C; }
+.sh-number     { color: #BD93F9; }
+.sh-comment    { color: rgba(255,255,255,0.3); font-style: italic; }
+.sh-property   { color: #8BE9FD; }
+.sh-punct      { color: rgba(255,255,255,0.5); }
+.sh-tag        { color: #FF79C6; }
+.sh-attr       { color: #50FA7B; }
+.sh-value      { color: #F1FA8C; }
+.sh-selector   { color: #FF79C6; }
+.sh-prop-css   { color: #8BE9FD; }
+.sh-val-css    { color: #50FA7B; }
+.sh-bool       { color: #BD93F9; }
+
+/* ============================================================
+   BOILERPLATE SECTION (Bottom of Left Panel)
+   ============================================================ */
+.boilerplate-section {
+  border-top: 1.5px solid var(--border);
+  background: var(--bg-card);
+  flex-shrink: 0;
+}
+.boilerplate-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.boilerplate-toggle:hover { color: var(--ink); }
+.boilerplate-toggle .bp-chevron { transition: transform var(--transition); margin-left: auto; }
+.boilerplate-section.open .bp-chevron { transform: rotate(180deg); }
+.boilerplate-body {
+  display: none;
+  padding: 0 16px 14px;
+}
+.boilerplate-section.open .boilerplate-body { display: block; }
+.boilerplate-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.bp-tab {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-4);
+  cursor: pointer;
+  transition: all var(--transition);
+  border: 1.5px solid transparent;
+}
+.bp-tab.active {
+  background: var(--ink);
+  color: white;
+}
+.bp-textarea-wrap { display: none; }
+.bp-textarea-wrap.active { display: block; }
+.bp-textarea {
+  width: 100%;
+  height: 100px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  background: var(--bg-code);
+  color: rgba(255,255,255,0.8);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 10px;
+  resize: vertical;
+  outline: none;
+}
+.bp-inject-hint {
+  font-size: 0.68rem;
+  color: var(--ink-4);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+.bp-inject-hint code {
+  font-family: var(--font-mono);
+  background: var(--bg);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.68rem;
+}
+
+/* ============================================================
+   JSON PREVIEW PANEL
+   ============================================================ */
+.json-preview {
+  background: rgba(0,0,0,0.25);
+  border-top: 1.5px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+  max-height: 160px;
+}
+.json-preview-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.4);
+  user-select: none;
+}
+.json-preview-toggle:hover { color: rgba(255,255,255,0.7); }
+.json-preview-toggle .jp-chevron { margin-left: auto; transition: transform var(--transition); }
+.json-preview.open .jp-chevron { transform: rotate(180deg); }
+.json-preview-body {
+  display: none;
+  padding: 0 16px 10px;
+  overflow: auto;
+  max-height: 120px;
+}
+.json-preview.open .json-preview-body { display: block; }
+.json-preview-body pre {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.6);
+  white-space: pre-wrap;
+}
+
+/* ============================================================
+   NOTIFICATION TOAST
+   ============================================================ */
+#toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--ink);
+  color: white;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  animation: toastIn 0.25s ease forwards;
+  pointer-events: all;
+  max-width: 280px;
+}
+.toast.success { background: #16A34A; }
+.toast.error   { background: var(--accent); }
+.toast.fade-out { animation: toastOut 0.25s ease forwards; }
+@keyframes toastIn  { from { opacity:0; transform: translateY(12px) scale(0.95); } to { opacity:1; transform: none; } }
+@keyframes toastOut { from { opacity:1; transform: none; } to { opacity:0; transform: translateY(8px) scale(0.95); } }
+
+/* ============================================================
+   MODAL (Confirm delete etc.)
+   ============================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition);
+}
+.modal-overlay.open { opacity: 1; visibility: visible; }
+.modal-box {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: var(--shadow-lg);
+  transform: scale(0.95);
+  transition: all var(--transition);
+}
+.modal-overlay.open .modal-box { transform: scale(1); }
+.modal-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+.modal-body { font-size: 0.83rem; color: var(--ink-3); margin-bottom: 20px; line-height: 1.6; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ============================================================
+   RESPONSIVE AWARENESS
+   ============================================================ */
+@media (max-width: 900px) {
+  #main {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+  #left-panel, #right-panel { overflow-y: auto; }
+}
+
+/* ============================================================
+   ANIMATE IN
+   ============================================================ */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.media-item { animation: fadeInUp 0.2s ease; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ============================================================
+       TOP BAR
+       ============================================================ -->
+  <div id="topbar">
+    <div class="topbar-logo">
+      <div class="logo-badge">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      </div>
+      <span class="logo-text">Pack<span>Builder</span></span>
+    </div>
+    <div class="topbar-divider"></div>
+    <span class="topbar-title">Media Package Builder</span>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost btn-sm" onclick="resetAll()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4"/></svg>
+        Reset
+      </button>
+      <div class="export-btn-group" id="exportGroup">
+        <button class="btn btn-secondary btn-sm" onclick="toggleExportMenu()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export
+          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="dropdown-menu" id="exportMenu">
+          <div class="dropdown-item" onclick="exportZIP()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download ZIP Package
+          </div>
+          <div class="dropdown-sep"></div>
+          <div class="dropdown-item" onclick="downloadFile('index.html')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Download index.html
+          </div>
+          <div class="dropdown-item" onclick="downloadFile('style.css')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Download style.css
+          </div>
+          <div class="dropdown-item" onclick="downloadFile('script.js')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Download script.js
+          </div>
+          <div class="dropdown-sep"></div>
+          <div class="dropdown-item" onclick="copyAllCode()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy All Code
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MAIN SPLIT
+       ============================================================ -->
+  <div id="main">
+
+    <!-- ============ LEFT PANEL ============ -->
+    <div id="left-panel">
+      <div class="panel-header">
+        <div class="panel-header-top">
+          <span class="panel-title">Media Items</span>
+          <span class="item-counter" id="itemCounter">0 items</span>
+        </div>
+        <div class="add-media-strip">
+          <button class="add-type-btn type-image" onclick="addItem('image')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Image
+          </button>
+          <button class="add-type-btn type-video" onclick="addItem('video')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+            Video
+          </button>
+          <button class="add-type-btn type-audio" onclick="addItem('audio')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            Audio
+          </button>
+          <button class="add-type-btn type-mcq" onclick="addItem('mcq')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            MCQ
+          </button>
+        </div>
+      </div>
+
+      <!-- Order Strip — live sequence of added items -->
+      <div class="order-strip" id="orderStrip">
+        <span class="order-strip-empty" id="orderStripEmpty">Add items above — they'll appear here in order →</span>
+      </div>
+
+      <!-- Media List -->
+      <div class="media-list-container" id="mediaListContainer">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-illustration">
+            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          </div>
+          <span class="empty-title">No media items yet</span>
+          <span class="empty-sub">Click Image, Video, Audio or MCQ above to start building your media package.</span>
+        </div>
+        <div id="mediaList"></div>
+      </div>
+
+      <!-- Boilerplate Injection -->
+      <div class="boilerplate-section" id="boilerplateSection">
+        <div class="boilerplate-toggle" onclick="toggleBoilerplate()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          Player Boilerplate Templates
+          <svg class="bp-chevron" xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="boilerplate-body">
+          <div class="boilerplate-tabs">
+            <div class="bp-tab active" data-bp="html" onclick="switchBpTab('html')">HTML</div>
+            <div class="bp-tab" data-bp="css" onclick="switchBpTab('css')">CSS</div>
+            <div class="bp-tab" data-bp="js" onclick="switchBpTab('js')">JS</div>
+          </div>
+          <div class="bp-textarea-wrap active" id="bp-html-wrap">
+            <textarea class="bp-textarea" id="bp-html" placeholder="Paste your HTML boilerplate here..." oninput="updatePreviews()"></textarea>
+          </div>
+          <div class="bp-textarea-wrap" id="bp-css-wrap">
+            <textarea class="bp-textarea" id="bp-css" placeholder="Paste your CSS boilerplate here..." oninput="updatePreviews()"></textarea>
+          </div>
+          <div class="bp-textarea-wrap" id="bp-js-wrap">
+            <textarea class="bp-textarea" id="bp-js" placeholder="Paste your JS boilerplate here. The builder will inject mediaData by replacing:&#10;  const mediaData = [...]" oninput="updatePreviews()"></textarea>
+          </div>
+          <div class="bp-inject-hint">
+            In your JS, the token <code>const mediaData = [/* INJECT */]</code> will be replaced with generated data. Or use placeholder <code>{{MEDIA_DATA}}</code>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ RIGHT PANEL ============ -->
+    <div id="right-panel">
+
+      <!-- Tab Bar -->
+      <div class="code-tabs">
+        <div class="code-tab active" data-tab="html" onclick="switchTab('html')">
+          <span class="tab-dot html"></span>
+          index.html
+        </div>
+        <div class="code-tab" data-tab="css" onclick="switchTab('css')">
+          <span class="tab-dot css"></span>
+          style.css
+        </div>
+        <div class="code-tab" data-tab="js" onclick="switchTab('js')">
+          <span class="tab-dot js"></span>
+          script.js
+        </div>
+        <div class="tabs-spacer"></div>
+        <button class="tab-action-btn" onclick="copyCurrentTab()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy
+        </button>
+        <button class="tab-action-btn" onclick="downloadCurrentTab()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download
+        </button>
+      </div>
+
+      <!-- HTML Panel -->
+      <div class="code-panel active" id="panel-html">
+        <div class="line-numbers" id="ln-html"></div>
+        <div class="code-content" id="code-html"></div>
+      </div>
+
+      <!-- CSS Panel -->
+      <div class="code-panel" id="panel-css">
+        <div class="line-numbers" id="ln-css"></div>
+        <div class="code-content" id="code-css"></div>
+      </div>
+
+      <!-- JS Panel -->
+      <div class="code-panel" id="panel-js">
+        <div class="line-numbers" id="ln-js"></div>
+        <div class="code-content" id="code-js"></div>
+      </div>
+
+      <!-- JSON Preview -->
+      <div class="json-preview" id="jsonPreview">
+        <div class="json-preview-toggle" onclick="toggleJsonPreview()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          mediaData JSON Preview
+          <svg class="jp-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="json-preview-body">
+          <pre id="jsonPreviewContent"></pre>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle">Delete Item?</div>
+    <div class="modal-body" id="modalBody">This action cannot be undone.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="modalConfirm">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<script>
+/* ============================================================
+   STATE MANAGEMENT
+   ============================================================ */
+let mediaItems = [];         // Array of media item objects
+let idCounter   = 1;         // Auto-increment ID
+let activeTab   = 'html';    // Current code preview tab
+let pendingDelete = null;    // Item pending deletion
+
+/* ============================================================
+   CONSTANTS — DEFAULT BOILERPLATE
+   ============================================================ */
+const DEFAULT_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Media Player</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="player-container">
+    <div id="media-viewport"></div>
+    <div id="controls">
+      <button id="btn-prev">Prev</button>
+      <button id="btn-next">Next</button>
+    </div>
+  </div>
+  <script src="script.js"><\/script>
+</body>
+</html>`;
+
+const DEFAULT_CSS = `/* Media Player Styles */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: sans-serif;
+  background: #111;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+#player-container {
+  width: 100%;
+  max-width: 800px;
+  padding: 20px;
+}
+
+#media-viewport {
+  width: 100%;
+  background: #222;
+  border-radius: 12px;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#controls {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  justify-content: center;
+}
+
+#controls button {
+  padding: 10px 28px;
+  border-radius: 8px;
+  background: #FF4D1C;
+  color: white;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+}`;
+
+const DEFAULT_JS_TEMPLATE = `// ─── mediaData (auto-generated) ───
+const mediaData = [/* INJECT */];
+
+// ─── Player Engine ───
+// Paste your player engine code below.
+// The mediaData array above will be injected automatically.
+
+let currentIndex = 0;
+const viewport = document.getElementById('media-viewport');
+
+function renderItem(index) {
+  const item = mediaData[index];
+  if (!item) return;
+  viewport.innerHTML = '';
+
+  if (item.type === 'image') {
+    const img = document.createElement('img');
+    img.src = item.url;
+    img.alt = item.alt || '';
+    img.style = 'max-width:100%;max-height:400px;border-radius:8px;';
+    viewport.appendChild(img);
+
+  } else if (item.type === 'video') {
+    const video = document.createElement('video');
+    video.src = item.url;
+    video.controls = true;
+    video.autoplay = item.autoplay || false;
+    video.loop = item.loop || false;
+    video.style = 'max-width:100%;border-radius:8px;';
+    viewport.appendChild(video);
+
+  } else if (item.type === 'audio') {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = \`<p style="margin-bottom:12px;font-size:16px;">\${item.title || 'Audio Track'}</p>\`;
+    const audio = document.createElement('audio');
+    audio.src = item.url;
+    audio.controls = true;
+    wrap.appendChild(audio);
+    viewport.appendChild(wrap);
+
+  } else if (item.type === 'mcq') {
+    const form = document.createElement('div');
+    form.style = 'padding:20px;width:100%;';
+    form.innerHTML = \`<p style="margin-bottom:16px;font-size:18px;">\${item.question}</p>\`;
+    item.options.forEach((opt, i) => {
+      const label = document.createElement('label');
+      label.style = 'display:block;padding:10px;margin:6px 0;background:rgba(255,255,255,0.05);border-radius:8px;cursor:pointer;';
+      label.innerHTML = \`<input type="radio" name="mcq_\${item.id}" value="\${i}"> \${opt}\`;
+      form.appendChild(label);
+    });
+    viewport.appendChild(form);
+  }
+}
+
+document.getElementById('btn-prev').onclick = () => {
+  if (currentIndex > 0) { currentIndex--; renderItem(currentIndex); }
+};
+document.getElementById('btn-next').onclick = () => {
+  if (currentIndex < mediaData.length - 1) { currentIndex++; renderItem(currentIndex); }
+};
+
+renderItem(0);`;
+
+/* ============================================================
+   ITEM TEMPLATES — Field definitions per media type
+   ============================================================ */
+const ITEM_TYPES = {
+  image: {
+    label: 'Image',
+    color: '#6366F1',
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
+    defaults: { url: '', alt: '' }
+  },
+  video: {
+    label: 'Video',
+    color: '#FF4D1C',
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>`,
+    defaults: { url: '', autoplay: false, loop: false }
+  },
+  audio: {
+    label: 'Audio',
+    color: '#00C896',
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
+    defaults: { url: '', title: '' }
+  },
+  mcq: {
+    label: 'MCQ',
+    color: '#FFB800',
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    defaults: { question: '', options: ['', '', '', ''], correct: 0 }
+  }
+};
+
+/* ============================================================
+   ADD MEDIA ITEM
+   — Appends a new DOM node directly; never re-renders existing
+     cards so open fields / typed text are always preserved.
+   ============================================================ */
+function addItem(type) {
+  // 1. Create data object and push to state array
+  const defaults = JSON.parse(JSON.stringify(ITEM_TYPES[type].defaults));
+  const item = { id: idCounter++, type, ...defaults };
+  mediaItems.push(item);
+
+  // 2. Hide empty state if this is the first item
+  document.getElementById('emptyState').style.display = 'none';
+
+  // 3. Build and inject only the NEW card into the DOM
+  const list = document.getElementById('mediaList');
+  const idx  = mediaItems.length - 1;
+  const tmp  = document.createElement('div');
+  tmp.innerHTML = buildItemHTML(item, idx, true); // new item starts expanded
+  const newEl = tmp.firstElementChild;
+  list.appendChild(newEl);
+
+  // 4. Re-init sortable so new card is draggable
+  initSortable();
+
+  // 5. Update counter + order strip
+  updateCounter();
+  updateOrderStrip();
+
+  // 6. Update code previews
+  updatePreviews();
+
+  // 7. Scroll new card into view
+  setTimeout(() => {
+    newEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 30);
+}
+
+/* ============================================================
+   RENDER MEDIA LIST  (full re-render — used only for reset,
+   delete, duplicate, and drag-reorder; NOT called on addItem)
+   ============================================================ */
+function renderMediaList() {
+  const list  = document.getElementById('mediaList');
+  const empty = document.getElementById('emptyState');
+
+  if (mediaItems.length === 0) {
+    empty.style.display = 'flex';
+    list.innerHTML = '';
+    updateCounter();
+    updateOrderStrip();
+    initSortable();
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Preserve which cards are currently expanded
+  const expanded = {};
+  list.querySelectorAll('.media-item.expanded').forEach(el => {
+    expanded[el.dataset.itemId] = true;
+  });
+
+  list.innerHTML = mediaItems
+    .map((item, idx) => buildItemHTML(item, idx, !!expanded[item.id]))
+    .join('');
+
+  updateCounter();
+  updateOrderStrip();
+  initSortable();
+}
+
+/* ── Counter helper ──────────────────────────────── */
+function updateCounter() {
+  const n = mediaItems.length;
+  document.getElementById('itemCounter').textContent =
+    `${n} item${n !== 1 ? 's' : ''}`;
+}
+
+/* ── Order Strip helper ──────────────────────────── */
+function updateOrderStrip() {
+  const strip = document.getElementById('orderStrip');
+  const emptyMsg = document.getElementById('orderStripEmpty');
+
+  if (mediaItems.length === 0) {
+    strip.innerHTML = '';
+    const span = document.createElement('span');
+    span.className = 'order-strip-empty';
+    span.id = 'orderStripEmpty';
+    span.textContent = 'Add items above — they\'ll appear here in order →';
+    strip.appendChild(span);
+    return;
+  }
+
+  // Rebuild pills — one pill per item in insertion order
+  const TYPE_LABELS = { image: '🖼 IMG', video: '▶ VID', audio: '♪ AUD', mcq: '? MCQ' };
+  strip.innerHTML = mediaItems.map((item, i) => {
+    const arrow = i < mediaItems.length - 1
+      ? `<span class="order-arrow">›</span>` : '';
+    return `<span class="order-pill ${item.type}" title="#${item.id} — ${ITEM_TYPES[item.type].label}">${i + 1}. ${TYPE_LABELS[item.type]}</span>${arrow}`;
+  }).join('');
+
+  // Scroll to end so latest item is always visible
+  strip.scrollLeft = strip.scrollWidth;
+}
+
+/* ============================================================
+   BUILD ITEM HTML
+   ============================================================ */
+function buildItemHTML(item, idx, isExpanded) {
+  const tInfo   = ITEM_TYPES[item.type];
+  const label   = getItemLabel(item);
+  const expClass = isExpanded ? ' expanded' : '';
+
+  return `<div class="media-item${expClass}" data-item-id="${item.id}" data-index="${idx}">
+    <div class="item-header" onclick="toggleItemExpand(${item.id})">
+      <div class="drag-handle" onclick="event.stopPropagation()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="9" cy="6" r="1.5" fill="currentColor"/><circle cx="9" cy="12" r="1.5" fill="currentColor"/><circle cx="9" cy="18" r="1.5" fill="currentColor"/><circle cx="15" cy="6" r="1.5" fill="currentColor"/><circle cx="15" cy="12" r="1.5" fill="currentColor"/><circle cx="15" cy="18" r="1.5" fill="currentColor"/></svg>
+      </div>
+      <div class="type-chip ${item.type}">${tInfo.icon} ${tInfo.label}</div>
+      <span class="item-label">${escHTML(label)}</span>
+      <span class="item-id-badge">#${item.id}</span>
+      <div class="item-actions" onclick="event.stopPropagation()">
+        <button class="icon-btn" title="Duplicate" onclick="duplicateItem(${item.id})">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+        <button class="icon-btn delete" title="Delete" onclick="confirmDelete(${item.id})">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+      </div>
+      <svg class="item-chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="item-form">
+      ${buildFormFields(item)}
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   BUILD FORM FIELDS PER TYPE
+   ============================================================ */
+function buildFormFields(item) {
+  if (item.type === 'image') return buildImageForm(item);
+  if (item.type === 'video') return buildVideoForm(item);
+  if (item.type === 'audio') return buildAudioForm(item);
+  if (item.type === 'mcq')   return buildMCQForm(item);
+  return '';
+}
+
+function buildImageForm(item) {
+  return `
+  <div class="form-row">
+    <label class="form-label">File Upload</label>
+    <div class="file-upload-area">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="color:var(--ink-4);margin-bottom:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <div style="font-size:0.75rem;color:var(--ink-3);font-weight:500;">Click to upload image</div>
+      <div class="upload-hint">PNG, JPG, GIF, WebP</div>
+      <input type="file" accept="image/*" onchange="handleFileUpload(event, ${item.id}, 'url', 'thumb-${item.id}')">
+    </div>
+    <div class="url-or">or</div>
+    <label class="form-label">URL</label>
+    <input class="form-input" type="url" placeholder="https://example.com/image.png" value="${escAttr(item.url)}"
+      oninput="updateItemField(${item.id}, 'url', this.value); updateThumb('thumb-${item.id}', this.value, 'image')">
+    <img id="thumb-${item.id}" class="media-thumb ${item.url ? 'visible' : ''}" src="${escAttr(item.url)}" alt="preview" onerror="this.classList.remove('visible')">
+  </div>
+  <div class="form-row">
+    <label class="form-label">Alt Text <span style="color:var(--ink-4);font-weight:400;text-transform:none">(optional)</span></label>
+    <input class="form-input" type="text" placeholder="Describe the image..." value="${escAttr(item.alt)}"
+      oninput="updateItemField(${item.id}, 'alt', this.value)">
+  </div>
+  <div class="validation-warning ${!item.url ? 'show' : ''}" id="warn-${item.id}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Image URL or file is required
+  </div>`;
+}
+
+function buildVideoForm(item) {
+  return `
+  <div class="form-row">
+    <label class="form-label">File Upload</label>
+    <div class="file-upload-area">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="color:var(--ink-4);margin-bottom:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <div style="font-size:0.75rem;color:var(--ink-3);font-weight:500;">Click to upload video</div>
+      <div class="upload-hint">MP4, WebM, MOV</div>
+      <input type="file" accept="video/*" onchange="handleFileUpload(event, ${item.id}, 'url', null)">
+    </div>
+    <div class="url-or">or</div>
+    <label class="form-label">URL</label>
+    <input class="form-input" type="url" placeholder="https://example.com/video.mp4" value="${escAttr(item.url)}"
+      oninput="updateItemField(${item.id}, 'url', this.value)">
+  </div>
+  <div class="form-row">
+    <div class="toggle-row">
+      <span class="toggle-label-text">Autoplay</span>
+      <label class="toggle-switch">
+        <input type="checkbox" ${item.autoplay ? 'checked' : ''} onchange="updateItemField(${item.id}, 'autoplay', this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label-text">Loop</span>
+      <label class="toggle-switch">
+        <input type="checkbox" ${item.loop ? 'checked' : ''} onchange="updateItemField(${item.id}, 'loop', this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+  <div class="validation-warning ${!item.url ? 'show' : ''}" id="warn-${item.id}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Video URL or file is required
+  </div>`;
+}
+
+function buildAudioForm(item) {
+  return `
+  <div class="form-row">
+    <label class="form-label">File Upload</label>
+    <div class="file-upload-area">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="color:var(--ink-4);margin-bottom:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <div style="font-size:0.75rem;color:var(--ink-3);font-weight:500;">Click to upload audio</div>
+      <div class="upload-hint">MP3, WAV, OGG, M4A</div>
+      <input type="file" accept="audio/*" onchange="handleFileUpload(event, ${item.id}, 'url', null)">
+    </div>
+    <div class="url-or">or</div>
+    <label class="form-label">URL</label>
+    <input class="form-input" type="url" placeholder="https://example.com/audio.mp3" value="${escAttr(item.url)}"
+      oninput="updateItemField(${item.id}, 'url', this.value)">
+  </div>
+  <div class="form-row">
+    <label class="form-label">Title / Curved Text</label>
+    <input class="form-input" type="text" placeholder="Track name or description..." value="${escAttr(item.title)}"
+      oninput="updateItemField(${item.id}, 'title', this.value)">
+  </div>
+  <div class="validation-warning ${!item.url ? 'show' : ''}" id="warn-${item.id}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Audio URL or file is required
+  </div>`;
+}
+
+function buildMCQForm(item) {
+  const opts = item.options || ['', '', '', ''];
+  const optRows = opts.map((opt, i) => `
+    <div class="mcq-option-row" id="mcq-opt-row-${item.id}-${i}">
+      <input class="mcq-option-radio" type="radio" name="mcq-correct-${item.id}"
+        ${item.correct === i ? 'checked' : ''}
+        onchange="updateItemField(${item.id}, 'correct', ${i})"
+        title="Mark as correct">
+      <input class="mcq-option-input" type="text" placeholder="Option ${i + 1}" value="${escAttr(opt)}"
+        oninput="updateMCQOption(${item.id}, ${i}, this.value)">
+      ${opts.length > 2 ? `<button class="icon-btn delete" title="Remove" onclick="removeMCQOption(${item.id}, ${i})" style="flex-shrink:0;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>` : ''}
+    </div>`).join('');
+
+  return `
+  <div class="form-row">
+    <label class="form-label">Question</label>
+    <textarea class="form-textarea" placeholder="Type your question here..." oninput="updateItemField(${item.id}, 'question', this.value)">${escHTML(item.question)}</textarea>
+  </div>
+  <div class="form-row">
+    <label class="form-label">Options <span style="color:var(--ink-4);font-weight:400;text-transform:none">— select radio to mark correct</span></label>
+    <div class="mcq-options" id="mcq-opts-${item.id}">
+      ${optRows}
+    </div>
+    ${opts.length < 6 ? `<button class="mcq-add-option-btn" onclick="addMCQOption(${item.id})" style="margin-top:6px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Option
+    </button>` : ''}
+  </div>
+  <div class="validation-warning ${!item.question ? 'show' : ''}" id="warn-${item.id}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Question text is required
+  </div>`;
+}
+
+/* ============================================================
+   ITEM INTERACTIONS
+   ============================================================ */
+
+// Toggle expand/collapse
+function toggleItemExpand(id) {
+  const el = document.querySelector(`[data-item-id="${id}"]`);
+  if (el) el.classList.toggle('expanded');
+}
+
+// Update a single field in an item
+function updateItemField(id, field, value) {
+  const item = mediaItems.find(i => i.id === id);
+  if (!item) return;
+  item[field] = value;
+  updateValidation(item);
+  updatePreviews();
+  // Update label
+  const el = document.querySelector(`[data-item-id="${id}"] .item-label`);
+  if (el) el.textContent = getItemLabel(item);
+}
+
+// Update validation warning inline
+function updateValidation(item) {
+  const warn = document.getElementById(`warn-${item.id}`);
+  if (!warn) return;
+  let invalid = false;
+  if (item.type === 'image'  && !item.url)      invalid = true;
+  if (item.type === 'video'  && !item.url)      invalid = true;
+  if (item.type === 'audio'  && !item.url)      invalid = true;
+  if (item.type === 'mcq'    && !item.question) invalid = true;
+  warn.classList.toggle('show', invalid);
+}
+
+// Update thumbnail visibility
+function updateThumb(thumbId, url, type) {
+  const img = document.getElementById(thumbId);
+  if (!img) return;
+  if (url) {
+    img.src = url;
+    img.classList.add('visible');
+  } else {
+    img.classList.remove('visible');
+  }
+}
+
+// Handle file upload → convert to object URL for preview
+function handleFileUpload(event, id, field, thumbId) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  updateItemField(id, field, `./${file.name}`); // use relative path for export
+  if (thumbId) {
+    const img = document.getElementById(thumbId);
+    if (img) { img.src = url; img.classList.add('visible'); }
+  }
+}
+
+// MCQ: update single option text
+function updateMCQOption(id, optIdx, value) {
+  const item = mediaItems.find(i => i.id === id);
+  if (!item) return;
+  item.options[optIdx] = value;
+  updatePreviews();
+}
+
+// MCQ: add option — surgically updates only this card's form body
+function addMCQOption(id) {
+  const item = mediaItems.find(i => i.id === id);
+  if (!item || item.options.length >= 6) return;
+  item.options.push('');
+  _refreshItemForm(id);
+  updatePreviews();
+}
+
+// MCQ: remove option — surgically updates only this card's form body
+function removeMCQOption(id, optIdx) {
+  const item = mediaItems.find(i => i.id === id);
+  if (!item || item.options.length <= 2) return;
+  item.options.splice(optIdx, 1);
+  if (item.correct >= item.options.length) item.correct = 0;
+  _refreshItemForm(id);
+  updatePreviews();
+}
+
+/* ── Surgical form refresh ───────────────────────────────────
+   Replaces only the .item-form div of one card in-place.
+   Used by MCQ add/remove option so no other cards are disturbed.
+   ─────────────────────────────────────────────────────────── */
+function _refreshItemForm(id) {
+  const item   = mediaItems.find(i => i.id === id);
+  const cardEl = document.querySelector(`[data-item-id="${id}"]`);
+  if (!item || !cardEl) return;
+  const formEl = cardEl.querySelector('.item-form');
+  if (formEl) formEl.innerHTML = buildFormFields(item);
+}
+
+// Duplicate item
+function duplicateItem(id) {
+  const item = mediaItems.find(i => i.id === id);
+  if (!item) return;
+  const clone = JSON.parse(JSON.stringify(item));
+  clone.id = idCounter++;
+  const idx = mediaItems.findIndex(i => i.id === id);
+  mediaItems.splice(idx + 1, 0, clone);
+  renderMediaList();
+  updatePreviews();
+  showToast('Item duplicated', 'success');
+}
+
+// Confirm delete
+function confirmDelete(id) {
+  pendingDelete = id;
+  const item = mediaItems.find(i => i.id === id);
+  document.getElementById('modalBody').textContent = `Delete ${ITEM_TYPES[item.type].label} item #${id}? This cannot be undone.`;
+  document.getElementById('modalConfirm').onclick = () => { deleteItem(pendingDelete); closeModal(); };
+  openModal();
+}
+
+function deleteItem(id) {
+  mediaItems = mediaItems.filter(i => i.id !== id);
+  renderMediaList();
+  updatePreviews();
+  showToast('Item deleted');
+}
+
+/* ============================================================
+   SORTABLE (Drag to Reorder)
+   ============================================================ */
+let sortableInstance = null;
+function initSortable() {
+  const el = document.getElementById('mediaList');
+  if (sortableInstance) sortableInstance.destroy();
+  if (!el || mediaItems.length === 0) return;
+  sortableInstance = Sortable.create(el, {
+    handle: '.drag-handle',
+    animation: 150,
+    ghostClass: 'sortable-ghost',
+    dragClass: 'sortable-drag',
+    onEnd(evt) {
+      const moved = mediaItems.splice(evt.oldIndex, 1)[0];
+      mediaItems.splice(evt.newIndex, 0, moved);
+      updateOrderStrip();
+      updatePreviews();
+    }
+  });
+}
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function escHTML(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escAttr(str) {
+  return String(str || '').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function getItemLabel(item) {
+  if (item.type === 'image') return item.url || item.alt || 'Untitled Image';
+  if (item.type === 'video') return item.url || 'Untitled Video';
+  if (item.type === 'audio') return item.title || item.url || 'Untitled Audio';
+  if (item.type === 'mcq')   return item.question ? (item.question.length > 40 ? item.question.slice(0,40)+'…' : item.question) : 'Untitled Question';
+  return 'Untitled';
+}
+
+/* ============================================================
+   MEDIA DATA JSON GENERATOR
+   ============================================================ */
+function generateMediaData() {
+  return mediaItems.map(item => {
+    if (item.type === 'image') {
+      const obj = { id: item.id, type: 'image', url: item.url || '' };
+      if (item.alt) obj.alt = item.alt;
+      return obj;
+    }
+    if (item.type === 'video') {
+      const obj = { id: item.id, type: 'video', url: item.url || '' };
+      if (item.autoplay) obj.autoplay = true;
+      if (item.loop)     obj.loop = true;
+      return obj;
+    }
+    if (item.type === 'audio') {
+      const obj = { id: item.id, type: 'audio', url: item.url || '' };
+      if (item.title) obj.title = item.title;
+      return obj;
+    }
+    if (item.type === 'mcq') {
+      return {
+        id: item.id,
+        type: 'mcq',
+        question: item.question || '',
+        options: item.options || [],
+        correct: item.correct || 0
+      };
+    }
+    return { id: item.id, type: item.type };
+  });
+}
+
+function generateMediaDataString() {
+  const data = generateMediaData();
+  if (data.length === 0) return '[]';
+
+  // Each item gets its own indented block — order is crystal-clear
+  const lines = data.map((item, idx) => {
+    const pos = `/* [${idx}] */`;   // position comment → shows order
+
+    if (item.type === 'mcq') {
+      const opts = item.options
+        .map(o => `      "${o.replace(/\\/g,'\\\\').replace(/"/g,'\\"')}"`)
+        .join(',\n');
+      return `  ${pos}\n  {\n    id: ${item.id},\n    type: "mcq",\n    question: "${escJS(item.question)}",\n    options: [\n${opts}\n    ],\n    correct: ${item.correct}\n  }`;
+    }
+
+    // image / video / audio
+    let props = `    id: ${item.id},\n    type: "${item.type}",\n    url: "${escJS(item.url)}"`;
+    if (item.alt)      props += `,\n    alt: "${escJS(item.alt)}"`;
+    if (item.title)    props += `,\n    title: "${escJS(item.title)}"`;
+    if (item.autoplay) props += `,\n    autoplay: true`;
+    if (item.loop)     props += `,\n    loop: true`;
+    return `  ${pos}\n  {\n${props}\n  }`;
+  });
+
+  return `[\n${lines.join(',\n\n')}\n]`;
+}
+
+function escJS(str) {
+  return String(str || '').replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\n/g,'\\n');
+}
+
+/* ============================================================
+   CODE GENERATION
+   ============================================================ */
+function generateHTML() {
+  const bp = document.getElementById('bp-html').value.trim();
+  return bp || DEFAULT_HTML;
+}
+
+function generateCSS() {
+  const bp = document.getElementById('bp-css').value.trim();
+  return bp || DEFAULT_CSS;
+}
+
+function generateJS() {
+  const bpJs = document.getElementById('bp-js').value.trim();
+  const dataStr = generateMediaDataString();
+  const mediaDecl = `const mediaData = ${dataStr};`;
+
+  if (bpJs) {
+    // Try to replace existing mediaData declaration
+    let result = bpJs;
+
+    // Pattern 1: const mediaData = [/* INJECT */];
+    result = result.replace(/const\s+mediaData\s*=\s*\[\/\*\s*INJECT\s*\*\/\];?/g, mediaDecl);
+
+    // Pattern 2: {{MEDIA_DATA}}
+    result = result.replace(/\{\{MEDIA_DATA\}\}/g, mediaDecl);
+
+    // Pattern 3: const mediaData = [...]; (multi-line) — replace with regex
+    result = result.replace(/const\s+mediaData\s*=\s*\[[\s\S]*?\];/m, mediaDecl);
+
+    return result;
+  }
+
+  // Use default template
+  return DEFAULT_JS_TEMPLATE.replace(/const mediaData = \[\/\* INJECT \*\/\];/, mediaDecl);
+}
+
+/* ============================================================
+   SYNTAX HIGHLIGHTING
+   ============================================================ */
+
+// Simple JS syntax highlighter
+function highlightJS(code) {
+  const esc = code
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+
+  return esc
+    // Comments
+    .replace(/(\/\/[^\n]*)/g, '<span class="sh-comment">$1</span>')
+    .replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="sh-comment">$1</span>')
+    // Strings (double, single, backtick)
+    .replace(/(`[^`]*`)/g,  '<span class="sh-string">$1</span>')
+    .replace(/("(?:[^"\\]|\\.)*")/g, '<span class="sh-string">$1</span>')
+    .replace(/('(?:[^'\\]|\\.)*')/g, '<span class="sh-string">$1</span>')
+    // Keywords
+    .replace(/\b(const|let|var|function|return|if|else|for|while|do|new|this|typeof|instanceof|in|of|true|false|null|undefined|class|extends|import|export|default|async|await|try|catch|finally|throw|switch|case|break|continue)\b/g,
+      '<span class="sh-keyword">$1</span>')
+    // Numbers
+    .replace(/\b(\d+\.?\d*)\b/g, '<span class="sh-number">$1</span>');
+}
+
+// Simple HTML syntax highlighter
+function highlightHTML(code) {
+  const esc = code
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+
+  return esc
+    .replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="sh-comment">$1</span>')
+    .replace(/(&lt;\/?)([\w-]+)/g, '<span class="sh-tag">&lt;$2<\/span>' )
+    .replace(/(\s)([\w-]+)=/g, '$1<span class="sh-attr">$2</span>=')
+    .replace(/=(&quot;[^&]*&quot;)/g, '=<span class="sh-value">$1</span>')
+    .replace(/(&lt;\/?)([\w-]+)/g, '<span class="sh-tag">$1$2</span>');
+}
+
+// Simple CSS syntax highlighter
+function highlightCSS(code) {
+  const esc = code
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+
+  return esc
+    .replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="sh-comment">$1</span>')
+    .replace(/([a-zA-Z][a-zA-Z0-9-]*)\s*:/g, '<span class="sh-prop-css">$1</span>:')
+    .replace(/:\s*([^;{}\n]+);/g, ': <span class="sh-val-css">$1</span>;')
+    .replace(/(#[a-fA-F0-9]{3,6})/g, '<span class="sh-number">$1</span>');
+}
+
+function buildLineNumbers(code) {
+  const count = code.split('\n').length;
+  return Array.from({length: count}, (_, i) =>
+    `<div class="line-number">${i+1}</div>`).join('');
+}
+
+/* ============================================================
+   UPDATE CODE PREVIEW
+   ============================================================ */
+function updatePreviews() {
+  const htmlCode = generateHTML();
+  const cssCode  = generateCSS();
+  const jsCode   = generateJS();
+
+  // HTML panel
+  document.getElementById('code-html').innerHTML = highlightHTML(htmlCode);
+  document.getElementById('ln-html').innerHTML    = buildLineNumbers(htmlCode);
+  // CSS panel
+  document.getElementById('code-css').innerHTML  = highlightCSS(cssCode);
+  document.getElementById('ln-css').innerHTML    = buildLineNumbers(cssCode);
+  // JS panel
+  document.getElementById('code-js').innerHTML   = highlightJS(jsCode);
+  document.getElementById('ln-js').innerHTML     = buildLineNumbers(jsCode);
+
+  // JSON preview
+  const jsonPrev = document.getElementById('jsonPreviewContent');
+  jsonPrev.innerHTML = highlightJS(
+    `const mediaData = ${JSON.stringify(generateMediaData(), null, 2)};`
+  );
+}
+
+/* ============================================================
+   CODE PREVIEW TAB SWITCHING
+   ============================================================ */
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.code-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  document.querySelectorAll('.code-panel').forEach(p => {
+    p.classList.toggle('active', p.id === `panel-${tab}`);
+  });
+}
+
+/* ============================================================
+   COPY & DOWNLOAD
+   ============================================================ */
+function getRawCode(tab) {
+  if (tab === 'html') return generateHTML();
+  if (tab === 'css')  return generateCSS();
+  if (tab === 'js')   return generateJS();
+  return '';
+}
+
+function copyCurrentTab() {
+  const code = getRawCode(activeTab);
+  navigator.clipboard.writeText(code).then(() => showToast(`Copied ${activeTab} to clipboard`, 'success'));
+}
+
+function downloadCurrentTab() {
+  const names = { html: 'index.html', css: 'style.css', js: 'script.js' };
+  const code = getRawCode(activeTab);
+  const blob = new Blob([code], { type: 'text/plain' });
+  saveAs(blob, names[activeTab]);
+  showToast(`Downloaded ${names[activeTab]}`, 'success');
+}
+
+function downloadFile(filename) {
+  closeExportMenu();
+  const tabMap = { 'index.html': 'html', 'style.css': 'css', 'script.js': 'js' };
+  const code = getRawCode(tabMap[filename]);
+  const blob = new Blob([code], { type: 'text/plain' });
+  saveAs(blob, filename);
+  showToast(`Downloaded ${filename}`, 'success');
+}
+
+function copyAllCode() {
+  closeExportMenu();
+  const all = `// === index.html ===\n${generateHTML()}\n\n// === style.css ===\n${generateCSS()}\n\n// === script.js ===\n${generateJS()}`;
+  navigator.clipboard.writeText(all).then(() => showToast('All code copied to clipboard', 'success'));
+}
+
+/* ============================================================
+   ZIP EXPORT
+   ============================================================ */
+async function exportZIP() {
+  closeExportMenu();
+  if (typeof JSZip === 'undefined') {
+    showToast('JSZip not available', 'error');
+    return;
+  }
+  const zip = new JSZip();
+  const pkg = zip.folder('package');
+  pkg.file('index.html', generateHTML());
+  pkg.file('style.css',  generateCSS());
+  pkg.file('script.js',  generateJS());
+  pkg.folder('assets').file('.gitkeep', '');
+
+  const blob = await zip.generateAsync({ type: 'blob' });
+  saveAs(blob, 'media-package.zip');
+  showToast('Package downloaded as ZIP', 'success');
+}
+
+/* ============================================================
+   BOILERPLATE
+   ============================================================ */
+function toggleBoilerplate() {
+  document.getElementById('boilerplateSection').classList.toggle('open');
+}
+function switchBpTab(tab) {
+  document.querySelectorAll('.bp-tab').forEach(t => t.classList.toggle('active', t.dataset.bp === tab));
+  document.querySelectorAll('.bp-textarea-wrap').forEach(w => w.classList.toggle('active', w.id === `bp-${tab}-wrap`));
+}
+
+/* ============================================================
+   JSON PREVIEW
+   ============================================================ */
+function toggleJsonPreview() {
+  document.getElementById('jsonPreview').classList.toggle('open');
+}
+
+/* ============================================================
+   EXPORT DROPDOWN
+   ============================================================ */
+function toggleExportMenu() {
+  document.getElementById('exportMenu').classList.toggle('open');
+}
+function closeExportMenu() {
+  document.getElementById('exportMenu').classList.remove('open');
+}
+document.addEventListener('click', e => {
+  if (!document.getElementById('exportGroup').contains(e.target)) {
+    closeExportMenu();
+  }
+});
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+function openModal() {
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+function showToast(msg, type = '') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `
+    ${type === 'success' ? '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>' :
+      type === 'error' ? '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' :
+      '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'}
+    ${msg}`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => toast.remove(), 300);
+  }, 2800);
+}
+
+/* ============================================================
+   RESET
+   ============================================================ */
+function resetAll() {
+  if (mediaItems.length === 0) { showToast('Nothing to reset'); return; }
+  document.getElementById('modalTitle').textContent = 'Reset All?';
+  document.getElementById('modalBody').textContent  = `This will delete all ${mediaItems.length} media item${mediaItems.length!==1?'s':''} and clear boilerplate templates. This cannot be undone.`;
+  document.getElementById('modalConfirm').onclick = () => {
+    mediaItems = [];
+    idCounter = 1;
+    document.getElementById('bp-html').value = '';
+    document.getElementById('bp-css').value  = '';
+    document.getElementById('bp-js').value   = '';
+    renderMediaList();
+    updatePreviews();
+    closeModal();
+    showToast('Reset complete');
+  };
+  openModal();
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init() {
+  renderMediaList();   // sets up empty state, counter, order strip
+  updatePreviews();    // populates code panels with defaults
+}
+
+init();
+</script>
+</body>
+</html>
