@@ -1481,7 +1481,7 @@ function updateOrderStrip() {
   }
 
   // Rebuild pills — one pill per item in insertion order
-  const TYPE_LABELS = { image: '🖼 IMG', video: '▶ VID', audio: '♪ AUD', mcq: '? MCQ' };
+  const TYPE_LABELS = { image: '▣ IMG', video: '▶ VID', audio: '♪ AUD', mcq: '? MCQ' };
   strip.innerHTML = mediaItems.map((item, i) => {
     const arrow = i < mediaItems.length - 1
       ? `<span class="order-arrow">›</span>` : '';
